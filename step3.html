@@ -6,8 +6,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>お茶席ぐるり — 席順表</title>
 <link rel="stylesheet" href="assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
   .pg-ico{ width:18px; height:18px; }
+  #capture{ padding:6px 10px 12px; }
   #print-head{ display:none; }
   @media print{
     body{ background:#fff; } .app{ max-width:none; box-shadow:none; background:#fff; }
@@ -26,28 +28,30 @@
     <div class="st on"><span class="dot">3</span><span class="lab">保存</span></div>
   </div>
   <div class="scroll">
-    <div id="print-head"><h1>お茶席ぐるり 席順表</h1><p id="pdate"></p></div>
-    <div class="page-h" id="title">席順表</div>
-    <div class="res-date" id="date"></div>
-    <div class="legend">
-      <span><i class="i-t"></i>亭主</span><span><i class="i-s"></i>正客</span><span><i class="i-d"></i>詰め</span>
-    </div>
     <div class="colorbar">
       <button class="btn sm ghost" id="colorBtn" type="button">
         <svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 2-.9 2-2 0-1.4 1-2 2.2-2H19a3 3 0 0 0 3-3c0-5-4.5-9-10-9z"/><circle cx="7.5" cy="11" r="1" fill="currentColor"/><circle cx="12" cy="8" r="1" fill="currentColor"/><circle cx="16" cy="11" r="1" fill="currentColor"/></svg>
         色分け：<span id="colorMode">役割</span>
       </button>
     </div>
-    <div class="tbl" id="tbl">
-      <div class="thead"><div class="h0">席</div><div>亭主</div><div>正客</div><div>詰め</div></div>
-      <div id="rows"></div>
+    <div id="capture">
+      <div id="print-head"><h1>お茶席ぐるり 席順表</h1><p id="pdate"></p></div>
+      <div class="page-h" id="title">席順表</div>
+      <div class="res-date" id="date"></div>
+      <div class="legend">
+        <span><i class="i-t"></i>亭主</span><span><i class="i-s"></i>正客</span><span><i class="i-d"></i>詰め</span>
+      </div>
+      <div class="tbl" id="tbl">
+        <div class="thead"><div class="h0">席</div><div>亭主</div><div>正客</div><div>詰め</div></div>
+        <div id="rows"></div>
+      </div>
     </div>
     <div class="note" id="note"></div>
   </div>
   <div class="actions">
     <a class="btn ghost narrow" href="step2.html" aria-label="戻る"><svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg></a>
     <button class="btn green" id="shuffleBtn" type="button"><svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h4l9 10h5M3 17h4l3-3M14 7h7M20 4l3 3-3 3M20 14l3 3-3 3"/></svg>シャッフル</button>
-    <button class="btn pink" id="pdfBtn" type="button"><svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>PDF</button>
+    <button class="btn pink" id="saveBtn" type="button"><svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>画像で保存</button>
     <a class="btn ghost narrow" href="index.html" aria-label="ホーム"><svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7M6 10v9h12v-9"/></svg></a>
   </div>
 </div>
@@ -91,10 +95,12 @@
     if(mode==='manual')  return { order:SEKI.buildOrder(participants,'manual',{ order:st.manualOrder }), ab:null };
     return { order:SEKI.buildOrder(participants,'random'), ab:null };  // random
   }
+  const baseManual = SEKI.buildOrder(participants,'manual',{ order: st.manualOrder });
   function reshuffle(){
     const n=participants.length;
-    if(mode==='senior') return { order:baseSenior, ab:SEKI.randomOffsets(n) };          // 亭主は固定／正客・詰めのみ
-    return { order:SEKI.buildOrder(participants,'random'), ab:SEKI.randomOffsets(n) };   // ランダム・手動は全部
+    if(mode==='senior') return { order:baseSenior, ab:SEKI.randomOffsets(n) };  // 亭主固定・正客/詰めのみ
+    if(mode==='manual')  return { order:baseManual, ab:SEKI.randomOffsets(n) };  // 手動も亭主固定・正客/詰めのみ
+    return { order:SEKI.buildOrder(participants,'random'), ab:SEKI.randomOffsets(n) };  // ランダムは全部
   }
 
   function stamp(){
@@ -109,7 +115,23 @@
 
   const iv=initialView(); paint(iv.order, iv.ab);
   $('shuffleBtn').onclick=()=>{ stamp(); const s=reshuffle(); paint(s.order, s.ab); };
-  $('pdfBtn').onclick=()=>window.print();
+  async function saveImage(){
+    const btn=$('saveBtn'), old=btn.innerHTML; btn.disabled=true; btn.textContent='作成中…';
+    try{
+      const canvas=await html2canvas($('capture'),{backgroundColor:'#ffffff',scale:2,useCORS:true});
+      const blob=await new Promise(res=>canvas.toBlob(res,'image/png'));
+      const file=new File([blob],'ocha-sekijun.png',{type:'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:'お茶席ぐるり 席順表'});   // iOS/Android：共有→写真に保存
+      }else{
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a'); a.href=url; a.download='ocha-sekijun.png'; document.body.appendChild(a); a.click(); a.remove();
+        window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),6000);
+      }
+    }catch(e){ if(!e||e.name!=='AbortError') alert('画像の保存に失敗しました。'); }
+    btn.disabled=false; btn.innerHTML=old;
+  }
+  $('saveBtn').onclick=saveImage;
   $('colorBtn').onclick=()=>{ byPerson=!byPerson; $('tbl').classList.toggle('byperson',byPerson); $('colorMode').textContent=byPerson?'人':'役割'; };
 })();
 </script>
