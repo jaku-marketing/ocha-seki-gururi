@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<!-- お茶席ぐるり — ② 並び順を選ぶ -->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>お茶席ぐるり — 並び順を選ぶ</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .seg{ display:inline-flex; border:2px solid var(--line); border-radius:99px; overflow:hidden; margin-top:6px; }
+  .seg button{ padding:8px 15px; font-size:12.5px; font-weight:900; background:#fff; border:0; color:var(--ink-soft); }
+  .seg button.on{ background:linear-gradient(180deg,var(--pink),var(--pink-d)); color:#fff; }
+  .ctrl{ background:rgba(255,255,255,.6); border:2px solid #fff; border-radius:14px; padding:12px 13px; margin:-4px 0 14px; }
+  .ctrl .t{ display:flex; align-items:center; gap:7px; font-size:12px; font-weight:900; color:var(--pink-d); margin-bottom:7px; }
+  .ctrl .t svg{ width:18px; height:18px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stepper">
+    <div class="st done"><span class="dot">1</span><span class="lab">メンバー</span></div>
+    <div class="st on"><span class="dot">2</span><span class="lab">並び順</span></div>
+    <div class="st"><span class="dot">3</span><span class="lab">保存</span></div>
+  </div>
+  <div class="scroll">
+    <div class="page-h"><svg class="hi" viewBox="0 0 24 24" fill="none" stroke="var(--pink-d)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M7 4 4 7M7 4l3 3M17 20V4M17 20l-3-3M17 20l3-3"/></svg>並び順を選ぶ</div>
+    <p class="page-lead">亭主の並びを決めます。正客・詰め・休憩は自動です。</p>
+
+    <button class="modecard on" data-mode="senior" type="button">
+      <img class="mi" src="img/ico_tejyun01.png" alt="">
+      <span class="txt"><span class="mh">年功序列</span><span class="md">茶歴順に。最初を先輩から。</span></span>
+    </button>
+    <button class="modecard" data-mode="random" type="button">
+      <img class="mi" src="img/ico_tejyun02.png" alt="">
+      <span class="txt"><span class="mh">ランダムで選ぶ</span><span class="md">公平にシャッフル。気軽な稽古に。</span></span>
+    </button>
+    <button class="modecard" data-mode="manual" type="button">
+      <img class="mi" src="img/ico_tejyun03.png" alt="">
+      <span class="txt"><span class="mh">手動で選ぶ</span><span class="md">ドラッグ（または↑↓）で並べ替え。</span></span>
+    </button>
+
+    <div class="ctrl" id="ctrl"></div>
+  </div>
+  <div class="actions">
+    <a class="btn ghost narrow" href="step1.html">← 戻る</a>
+    <button class="btn pink" id="genBtn" type="button">席順を作成する</button>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+"use strict";
+(function(){
+  const $=id=>document.getElementById(id);
+  const roster=SEKI.loadRoster(); const st=SEKI.loadState();
+  const selSet=new Set(st.selected||[]);
+  const participants=roster.filter(m=>selSet.has(m.name));
+  let mode=st.mode||'senior';
+  let seniorDesc=(st.seniorDesc!==false);
+  let manualOrder=(Array.isArray(st.manualOrder)&&st.manualOrder.length?st.manualOrder.filter(n=>selSet.has(n)):participants.slice().sort((a,b)=>b.years-a.years).map(m=>m.name));
+
+  function setMode(m){ mode=m; document.querySelectorAll('.modecard').forEach(c=>c.classList.toggle('on',c.dataset.mode===m)); renderCtrl(); }
+  document.querySelectorAll('.modecard').forEach(c=>c.onclick=()=>setMode(c.dataset.mode));
+
+  const DICE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.1" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.1" fill="currentColor" stroke="none"/></svg>';
+
+  function renderCtrl(){
+    const c=$('ctrl'); c.innerHTML='';
+    if(mode==='senior'){
+      c.innerHTML='<div class="t">先頭をどちらに？</div><div class="seg"><button data-d="1" class="'+(seniorDesc?'on':'')+'">先輩を先頭</button><button data-d="0" class="'+(!seniorDesc?'on':'')+'">後輩を先頭</button></div>';
+      c.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{ seniorDesc=b.dataset.d==='1'; renderCtrl(); });
+    } else if(mode==='random'){
+      c.innerHTML='<div class="t">'+DICE+'作成するたびに新しい順になります</div>';
+    } else {
+      manualOrder=manualOrder.filter(n=>selSet.has(n)); participants.forEach(m=>{ if(!manualOrder.includes(m.name)) manualOrder.push(m.name); });
+      const by={}; participants.forEach(m=>by[m.name]=m);
+      const head=document.createElement('div'); head.className='t'; head.textContent='ドラッグ、または ↑↓ で並べ替え'; c.appendChild(head);
+      const list=document.createElement('div'); list.className='manual-list'; list.id='mlist'; c.appendChild(list);
+      manualOrder.forEach((nm,i)=>{
+        const r=document.createElement('div'); r.className='mrow'; r.dataset.name=nm;
+        r.innerHTML='<span class="grip" title="ドラッグ">⠿</span><span class="pos">'+(i+1)+'</span><span class="mn">'+nm+'</span>'
+          +'<span class="ud"><button data-up>▲</button><button data-down>▼</button></span>';
+        list.appendChild(r);
+      });
+      enableDrag(list); refreshPos(list);
+      list.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>moveRow(b.closest('.mrow'),-1));
+      list.querySelectorAll('[data-down]').forEach(b=>b.onclick=()=>moveRow(b.closest('.mrow'),1));
+    }
+  }
+  function refreshPos(list){ [...list.querySelectorAll('.mrow')].forEach((r,i)=>{ r.querySelector('.pos').textContent=i+1; const up=r.querySelector('[data-up]'),dn=r.querySelector('[data-down]'); up.disabled=i===0; dn.disabled=i===list.children.length-1; }); syncOrder(list); }
+  function syncOrder(list){ manualOrder=[...list.querySelectorAll('.mrow')].map(r=>r.dataset.name); }
+  function moveRow(row,dir){ const list=row.parentNode; const rows=[...list.children]; const i=rows.indexOf(row); const j=i+dir; if(j<0||j>=rows.length)return; if(dir<0) list.insertBefore(row,rows[j]); else list.insertBefore(row,rows[j].nextSibling); refreshPos(list); }
+
+  function enableDrag(list){
+    let drag=null;
+    function onMove(e){
+      if(!drag) return; e.preventDefault();
+      const row=drag.row, dy=e.clientY-drag.y0;
+      row.style.transform='translateY('+dy+'px)';   // 行が指に追従して動く
+      const rect=row.getBoundingClientRect(), cy=rect.top+rect.height/2;
+      const prev=row.previousElementSibling, next=row.nextElementSibling;
+      if(prev){ const pr=prev.getBoundingClientRect(); if(cy < pr.top+pr.height/2){ list.insertBefore(row,prev); drag.y0 -= pr.height; row.style.transform='translateY('+(e.clientY-drag.y0)+'px)'; refreshPos(list); return; } }
+      if(next){ const nr=next.getBoundingClientRect(); if(cy > nr.top+nr.height/2){ list.insertBefore(next,row); drag.y0 += nr.height; row.style.transform='translateY('+(e.clientY-drag.y0)+'px)'; refreshPos(list); return; } }
+    }
+    function onUp(e){ if(!drag) return; const row=drag.row; row.classList.remove('dragging'); row.style.zIndex=''; row.style.transform=''; drag=null; refreshPos(list); }
+    list.querySelectorAll('.grip').forEach(g=>{
+      g.addEventListener('pointerdown', e=>{ e.preventDefault(); const row=g.closest('.mrow'); drag={row,y0:e.clientY}; row.classList.add('dragging'); row.style.zIndex='30'; try{ g.setPointerCapture(e.pointerId); }catch(_){ } });
+      g.addEventListener('pointermove', onMove);
+      g.addEventListener('pointerup', onUp);
+      g.addEventListener('pointercancel', onUp);
+    });
+  }
+
+  $('genBtn').onclick=()=>{ if(participants.length<3){ alert('メンバーが3名以上必要です。'); location.href='step1.html'; return; }
+    SEKI.patchState({mode,seniorDesc,manualOrder}); location.href='step3.html'; };
+
+  setMode(mode);
+})();
+</script>
+</body>
+</html>

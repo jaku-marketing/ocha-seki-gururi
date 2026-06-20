@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<!-- お茶席ぐるり — ① 参加メンバーを選ぶ -->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>お茶席ぐるり — メンバーを選ぶ</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .hi-emoji{ font-size:24px; }
+  /* 編集オーバーレイ */
+  .editor{ position:fixed; inset:0; z-index:50; background:rgba(40,25,32,.45); display:none; align-items:flex-end; }
+  .editor.on{ display:flex; }
+  .editor .panel{ width:100%; max-width:480px; margin:0 auto; max-height:88vh; background:var(--cream); border-radius:22px 22px 0 0; display:flex; flex-direction:column; }
+  .editor .eh{ padding:16px 16px 8px; font-weight:900; font-size:17px; }
+  .editor .escroll{ flex:1 1 auto; overflow-y:auto; padding:0 14px 8px; }
+  .erow{ display:flex; align-items:center; gap:7px; background:#fff; border:2px solid var(--line); border-radius:12px; padding:7px 9px; margin-bottom:7px; }
+  .erow input{ font:inherit; border:1px solid var(--line); border-radius:8px; padding:7px 8px; background:var(--cream); min-width:0; }
+  .erow .en{ flex:1 1 auto; } .erow .ey{ width:62px; }
+  .erow .eg{ display:flex; gap:3px; flex:0 0 auto; }
+  .erow .eg button{ width:30px; height:32px; border:2px solid var(--line); border-radius:8px; background:var(--cream); font-size:12px; font-weight:900; }
+  .erow .eg button.on[data-g="m"]{ background:#dbe6fb; border-color:#7fa0d8; color:#3f5b86; }
+  .erow .eg button.on[data-g="f"]{ background:var(--pink-soft); border-color:var(--pink); color:var(--pink-d); }
+  .erow .del{ width:32px; height:32px; border:2px solid var(--line); border-radius:8px; background:var(--cream); color:var(--pink-d); font-size:15px; }
+  .addnew{ display:flex; gap:6px; padding:6px 0 4px; }
+  .addnew input{ font:inherit; border:1px solid var(--line); border-radius:8px; padding:9px 9px; background:#fff; min-width:0; }
+  .addnew .en{ flex:1 1 auto; } .addnew .ey{ width:64px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><symbol id="ck" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol></svg>
+<div class="app">
+  <div class="stepper">
+    <div class="st on"><span class="dot">1</span><span class="lab">メンバー</span></div>
+    <div class="st"><span class="dot">2</span><span class="lab">並び順</span></div>
+    <div class="st"><span class="dot">3</span><span class="lab">保存</span></div>
+  </div>
+  <div class="scroll">
+    <div class="page-h"><svg class="hi" viewBox="0 0 24 24" fill="none" stroke="var(--pink-d)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17" cy="8.5" r="2.3"/><path d="M16 14c2.4 .2 4.5 2 4.5 5"/></svg>参加メンバーを選ぶ</div>
+    <p class="page-lead">お茶会に参加する人をタップで選択してください。</p>
+    <div class="toolbar">
+      <span class="count">参加 <b id="cnt">0</b> 名（<span id="seki">0</span> 席）</span>
+      <span class="sp"></span>
+      <button class="btn sm ghost" id="allBtn" type="button">全選択</button>
+      <button class="btn sm ghost" id="noneBtn" type="button">解除</button>
+      <button class="btn sm pink" id="editBtn" type="button">✎ 編集</button>
+    </div>
+    <div class="mgrid" id="grid"></div>
+    <div class="total">参加合計 <b id="total">0</b> 名<span class="sub">（<span id="seki2">0</span>席）</span></div>
+  </div>
+  <div class="actions">
+    <a class="btn ghost narrow" href="index.html">← トップ</a>
+    <button class="btn pink" id="nextBtn" type="button">次へ →</button>
+  </div>
+</div>
+
+<!-- 編集 -->
+<div class="editor" id="editor">
+  <div class="panel">
+    <div class="eh">メンバーを編集</div>
+    <div class="escroll" id="elist"></div>
+    <div style="padding:0 14px">
+      <div class="addnew">
+        <input class="en" id="newName" placeholder="名前（例：西尾 彩葉）" maxlength="16">
+        <input class="ey" id="newYears" type="number" min="0" max="80" placeholder="茶歴">
+      </div>
+      <div class="addnew">
+        <button class="btn sm ghost" id="newGender" data-g="f" type="button" style="flex:0 0 auto">女性</button>
+        <button class="btn sm pink" id="addBtn" type="button" style="flex:1 1 auto">＋ 追加</button>
+      </div>
+      <button class="btn sm ghost" id="resetBtn" type="button" style="margin:8px 0 4px">初期メンバーに戻す</button>
+    </div>
+    <div class="actions"><button class="btn pink" id="editDone" type="button">保存して戻る</button></div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+"use strict";
+(function(){
+  const $=id=>document.getElementById(id);
+  let roster=SEKI.loadRoster();
+  const st=SEKI.loadState();
+  // 参加選択（保存済みがあれば復元、無ければ attend 既定）
+  let selected = new Set(Array.isArray(st.selected)&&st.selected.length ? st.selected : roster.filter(m=>m.attend).map(m=>m.name));
+
+  function render(){
+    const rs=SEKI.withIcons(roster.slice().sort((a,b)=>b.years-a.years));
+    const g=$('grid'); g.innerHTML='';
+    rs.forEach(m=>{
+      const on=selected.has(m.name);
+      const c=document.createElement('div'); c.className='mcard '+m.gender+(on?' on':''); c.dataset.name=m.name;
+      c.innerHTML='<span class="chk"><svg><use href="#ck"/></svg></span>'
+        +'<img class="ph" src="'+m.icon+'" alt="" onerror="this.style.visibility=\'hidden\'">'
+        +'<div class="nm">'+m.name+'</div><div class="yr"><span class="num">'+m.years+'</span><span class="u">YEARS</span></div>';
+      c.onclick=()=>{ if(selected.has(m.name)) selected.delete(m.name); else selected.add(m.name); render(); };
+      g.appendChild(c);
+    });
+    const n=selected.size; $('cnt').textContent=n; $('seki').textContent=n; $('total').textContent=n; $('seki2').textContent=n;
+  }
+  $('allBtn').onclick=()=>{ roster.forEach(m=>selected.add(m.name)); render(); };
+  $('noneBtn').onclick=()=>{ selected.clear(); render(); };
+  $('nextBtn').onclick=()=>{
+    if(selected.size<3){ const b=$('nextBtn'); const o=b.textContent; b.textContent='3名以上選んでね'; b.disabled=true; setTimeout(()=>{b.textContent=o;b.disabled=false;},1300); return; }
+    SEKI.saveRoster(roster);
+    SEKI.patchState({ selected:[...selected] });
+    location.href='step2.html';
+  };
+
+  /* ===== 編集 ===== */
+  let newGender='f';
+  function renderEdit(){
+    const el=$('elist'); el.innerHTML='';
+    roster.slice().sort((a,b)=>b.years-a.years).forEach(m=>{
+      const r=document.createElement('div'); r.className='erow';
+      r.innerHTML='<input class="en" value="'+m.name.replace(/"/g,'&quot;')+'">'
+        +'<input class="ey" type="number" min="0" max="80" value="'+m.years+'">'
+        +'<span class="eg"><button data-g="m" class="'+(m.gender==='m'?'on':'')+'">男</button><button data-g="f" class="'+(m.gender==='f'?'on':'')+'">女</button></span>'
+        +'<button class="del">×</button>';
+      const en=r.querySelector('.en'), ey=r.querySelector('.ey');
+      en.oninput=()=>{ const old=m.name; m.name=en.value; if(selected.has(old)){ selected.delete(old); selected.add(m.name);} };
+      ey.oninput=()=>{ m.years=Math.max(0,parseInt(ey.value,10)||0); };
+      r.querySelectorAll('.eg button').forEach(b=>b.onclick=()=>{ m.gender=b.dataset.g; renderEdit(); });
+      r.querySelector('.del').onclick=()=>{ roster=roster.filter(x=>x!==m); selected.delete(m.name); renderEdit(); };
+      el.appendChild(r);
+    });
+  }
+  $('editBtn').onclick=()=>{ renderEdit(); $('editor').classList.add('on'); };
+  $('newGender').onclick=()=>{ newGender=newGender==='f'?'m':'f'; const b=$('newGender'); b.textContent=newGender==='f'?'女性':'男性'; b.className='btn sm '+(newGender==='f'?'pink':'ghost'); };
+  $('addBtn').onclick=()=>{ const nm=$('newName').value.trim(); const y=parseInt($('newYears').value,10);
+    if(!nm){ $('newName').focus(); return; } roster.push({name:nm,years:isNaN(y)?0:y,gender:newGender,attend:true}); selected.add(nm);
+    $('newName').value=''; $('newYears').value=''; renderEdit(); };
+  $('resetBtn').onclick=()=>{ if(!confirm('初期メンバーに戻しますか？（この端末の編集は消えます）'))return; roster=SEKI.resetRoster(); selected=new Set(roster.filter(m=>m.attend).map(m=>m.name)); renderEdit(); };
+  $('editDone').onclick=()=>{ roster=roster.filter(m=>String(m.name).trim()); SEKI.saveRoster(roster); $('editor').classList.remove('on'); render(); };
+
+  render();
+})();
+</script>
+</body>
+</html>

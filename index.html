@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!-- お茶席ぐるり — トップ（オープニング・アニメ／01-02 クロスフェード） -->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>お茶席ぐるり</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .app.top{ background:url('img/bg_main.png') center/cover no-repeat, var(--pink-bg); }
+  .stage{ position:relative; flex:1 1 auto; min-height:100dvh; overflow:hidden; }
+  .logo{ position:absolute; top:1%; left:50%; width:86%; max-width:410px; transform:translateX(-50%) scale(.2); opacity:0; animation:boon .9s var(--ease-out) .1s forwards; z-index:1; }
+
+  .ch{ position:absolute; opacity:0; }
+  .ch .a{ display:block; width:100%; transition:opacity .9s ease; }
+  .ch .b{ position:absolute; inset:0; width:100%; opacity:0; transition:opacity .9s ease; }
+  .ch.swap .a{ opacity:0; } .ch.swap .b{ opacity:1; }
+  .ch.center{ width:71%; left:50%; bottom:20%; transform:translateX(-50%) translateY(30px); z-index:3; animation:rise .7s var(--ease-out) .55s forwards; }
+  .ch.tl{ width:25%; left:1%; top:29%; transform:translateY(18px); z-index:2; animation:pop .55s var(--ease-out) 1.0s forwards; }
+  .ch.tr{ width:25%; right:1%; top:29%; transform:translateY(18px); z-index:2; animation:pop .55s var(--ease-out) 1.2s forwards; }
+  .ch.bl{ width:25%; left:1%; top:51%; transform:translateY(18px); z-index:2; animation:pop .55s var(--ease-out) 1.4s forwards; }
+  .ch.br{ width:25%; right:1%; top:51%; transform:translateY(18px); z-index:2; animation:pop .55s var(--ease-out) 1.6s forwards; }
+
+  .topbtn{ position:absolute; left:50%; transform:translateX(-50%); width:58%; max-width:268px; opacity:0; z-index:6; }
+  .topbtn img{ width:100%; }
+  .b1{ bottom:15%; animation:rise2 .6s var(--ease-out) 2.0s forwards, floaty 2.8s ease-in-out 2.8s infinite; }
+  .b2{ width:50%; max-width:232px; bottom:3.5%; animation:rise2 .6s var(--ease-out) 2.2s forwards, floaty 2.8s ease-in-out 3.2s infinite; }
+  .topbtn:active{ filter:brightness(.95); }
+
+  @keyframes boon{ 0%{opacity:0; transform:translateX(-50%) scale(.2) rotate(-6deg);} 60%{opacity:1; transform:translateX(-50%) scale(1.12) rotate(2deg);} 80%{transform:translateX(-50%) scale(.95);} 100%{opacity:1; transform:translateX(-50%) scale(1);} }
+  @keyframes rise{ from{opacity:0; transform:translateX(-50%) translateY(30px);} to{opacity:1; transform:translateX(-50%) translateY(0);} }
+  @keyframes pop{ 0%{opacity:0; transform:translateY(18px) scale(.6);} 70%{opacity:1; transform:translateY(0) scale(1.06);} 100%{opacity:1; transform:translateY(0) scale(1);} }
+  @keyframes rise2{ from{opacity:0; transform:translateX(-50%) translateY(14px);} to{opacity:1; transform:translateX(-50%) translateY(0);} }
+  @keyframes floaty{ 0%,100%{ transform:translateX(-50%) translateY(0);} 50%{ transform:translateX(-50%) translateY(-5px);} }
+  @media (prefers-reduced-motion:reduce){ .ch,.logo,.topbtn{ opacity:1!important; animation:none!important; } }
+</style>
+</head>
+<body>
+<div class="app top">
+  <div class="stage">
+    <img class="logo" src="img/logo.png" alt="お茶席ぐるり">
+    <div class="ch center" id="c0"><img class="a" src="img/c_main_nakayama01.png" alt=""><img class="b" src="img/c_main_nakayama02.png" alt=""></div>
+    <div class="ch tl" id="c1"><img class="a" src="img/c_main_kane01.png" alt=""><img class="b" src="img/c_main_kane02.png" alt=""></div>
+    <div class="ch tr" id="c2"><img class="a" src="img/c_main_iwamura01.png" alt=""><img class="b" src="img/c_main_iwamura02.png" alt=""></div>
+    <div class="ch bl" id="c3"><img class="a" src="img/c_main_kawai01.png" alt=""><img class="b" src="img/c_main_kawai02.png" alt=""></div>
+    <div class="ch br" id="c4"><img class="a" src="img/c_main_nagisa01.png" alt=""><img class="b" src="img/c_main_nagisa02.png" alt=""></div>
+    <a class="topbtn b1" href="step1.html" aria-label="はじめる"><img src="img/btn_top01.png" alt="はじめる"></a>
+    <a class="topbtn b2" href="setsumei.html" aria-label="説明を読む"><img src="img/btn_top02.png" alt="説明を読む"></a>
+  </div>
+</div>
+<script>
+"use strict";
+(function(){
+  const ids=['c0','c1','c2','c3','c4'];
+  // 一定間隔で 01⇄02 をクロスフェード（消えずに重ねてフェード）
+  // 一定間隔で「1人ずつ」順番にクロスフェード（パラパラしない・間隔長め）
+  setTimeout(()=>{
+    let k=0;
+    setInterval(()=>{ const el=document.getElementById(ids[k%ids.length]); if(el) el.classList.toggle('swap'); k++; }, 3000);
+  }, 2800);
+})();
+</script>
+</body>
+</html>

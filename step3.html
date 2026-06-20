@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<!-- お茶席ぐるり — ③ 席順表（保存／シャッフル／人色分け） -->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>お茶席ぐるり — 席順表</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .pg-ico{ width:18px; height:18px; }
+  #print-head{ display:none; }
+  @media print{
+    body{ background:#fff; } .app{ max-width:none; box-shadow:none; background:#fff; }
+    .stepper,.actions,.legend,.note,.colorbar{ display:none!important; }
+    #print-head{ display:block; text-align:center; margin-bottom:10px; }
+    #print-head h1{ font-size:20px; margin:0; } #print-head p{ font-size:12px; color:#555; margin:4px 0 0; }
+    .tbl{ box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stepper">
+    <div class="st done"><span class="dot">1</span><span class="lab">メンバー</span></div>
+    <div class="st done"><span class="dot">2</span><span class="lab">並び順</span></div>
+    <div class="st on"><span class="dot">3</span><span class="lab">保存</span></div>
+  </div>
+  <div class="scroll">
+    <div id="print-head"><h1>お茶席ぐるり 席順表</h1><p id="pdate"></p></div>
+    <div class="page-h" id="title">席順表</div>
+    <div class="res-date" id="date"></div>
+    <div class="legend">
+      <span><i class="i-t"></i>亭主</span><span><i class="i-s"></i>正客</span><span><i class="i-d"></i>詰め</span>
+    </div>
+    <div class="colorbar">
+      <button class="btn sm ghost" id="colorBtn" type="button">
+        <svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 2-.9 2-2 0-1.4 1-2 2.2-2H19a3 3 0 0 0 3-3c0-5-4.5-9-10-9z"/><circle cx="7.5" cy="11" r="1" fill="currentColor"/><circle cx="12" cy="8" r="1" fill="currentColor"/><circle cx="16" cy="11" r="1" fill="currentColor"/></svg>
+        色分け：<span id="colorMode">役割</span>
+      </button>
+    </div>
+    <div class="tbl" id="tbl">
+      <div class="thead"><div class="h0">席</div><div>亭主</div><div>正客</div><div>詰め</div></div>
+      <div id="rows"></div>
+    </div>
+    <div class="note" id="note"></div>
+  </div>
+  <div class="actions">
+    <a class="btn ghost narrow" href="step2.html" aria-label="戻る"><svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg></a>
+    <button class="btn green" id="shuffleBtn" type="button"><svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h4l9 10h5M3 17h4l3-3M14 7h7M20 4l3 3-3 3M20 14l3 3-3 3"/></svg>シャッフル</button>
+    <button class="btn pink" id="pdfBtn" type="button"><svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>PDF</button>
+    <a class="btn ghost narrow" href="index.html" aria-label="ホーム"><svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7M6 10v9h12v-9"/></svg></a>
+  </div>
+</div>
+
+<div class="stamp-layer" id="stampLayer"></div>
+
+<script src="assets/app.js"></script>
+<script>
+"use strict";
+(function(){
+  const $=id=>document.getElementById(id);
+  const roster=SEKI.loadRoster(), st=SEKI.loadState();
+  const selSet=new Set(st.selected||[]);
+  const participants=roster.filter(m=>selSet.has(m.name));
+  const STAMPS=['img/img_randam01.png','img/img_randam02.png','img/img_randam03.png'];
+  STAMPS.forEach(s=>{ const i=new Image(); i.src=s; });
+
+  // 人ごとの色（最大十数名 → 色相を均等割り）
+  const N=participants.length||1;
+  const COLOR={}; participants.forEach((m,i)=>{ const h=Math.round(i*360/N); COLOR[m.name]={pc:'hsl('+h+',72%,89%)', pct:'hsl('+h+',48%,33%)'}; });
+  let byPerson=false;
+
+  function cell(role,m){ const c=COLOR[m.name]||{pc:'#eee',pct:'#444'};
+    return '<div class="cell '+role+'" style="--pc:'+c.pc+';--pct:'+c.pct+'">'+SEKI.sei(m.name)+'</div>'; }
+
+  function paint(order, ab){
+    const {rows,a,b,n}=SEKI.makeTable(order, ab);
+    const wrap=$('rows'); wrap.innerHTML='';
+    rows.forEach(r=>{ const d=document.createElement('div'); d.className='trow';
+      d.innerHTML='<div class="sk">'+SEKI.sekiLabel(r.seki)+'</div>'+cell('t',r.teishu)+cell('s',r.shokyaku)+cell('d',r.tsume);
+      wrap.appendChild(d); });
+    const dt=new Date(); const ds=dt.getFullYear()+'年'+(dt.getMonth()+1)+'月'+dt.getDate()+'日';
+    $('title').textContent='席順表（全 '+n+' 席）';
+    $('date').textContent=ds+' ／ 参加 '+n+' 名'; $('pdate').textContent=ds+'　参加 '+n+' 名';
+    $('note').innerHTML='<b>仕組み</b>：各自が〈亭主・正客・詰め〉を1回ずつ（重複なし）。正客＝亭主の'+a+'つあと、詰め＝'+b+'つあと（巡回）で、出番が均等に散り間に休憩が入ります。';
+  }
+  const mode = st.mode||'senior';
+  const baseSenior = SEKI.buildOrder(participants,'senior',{ asc: st.seniorDesc===false });
+  function initialView(){
+    if(mode==='senior') return { order:baseSenior, ab:null };
+    if(mode==='manual')  return { order:SEKI.buildOrder(participants,'manual',{ order:st.manualOrder }), ab:null };
+    return { order:SEKI.buildOrder(participants,'random'), ab:null };  // random
+  }
+  function reshuffle(){
+    const n=participants.length;
+    if(mode==='senior') return { order:baseSenior, ab:SEKI.randomOffsets(n) };          // 亭主は固定／正客・詰めのみ
+    return { order:SEKI.buildOrder(participants,'random'), ab:SEKI.randomOffsets(n) };   // ランダム・手動は全部
+  }
+
+  function stamp(){
+    const layer=$('stampLayer'); layer.innerHTML='';
+    layer.classList.remove('flash'); void layer.offsetWidth; layer.classList.add('flash');
+    const img=document.createElement('img'); img.className='stamp'; img.src=STAMPS[Math.floor(Math.random()*STAMPS.length)];
+    layer.appendChild(img); void img.offsetWidth; img.classList.add('go');
+    setTimeout(()=>{ layer.innerHTML=''; layer.classList.remove('flash'); }, 1200);
+  }
+
+  if(participants.length<3){ $('rows').innerHTML='<div style="padding:16px;font-weight:700">メンバーが3名以上必要です。<a href="step1.html" style="color:var(--pink-d)">← メンバーを選ぶ</a></div>'; $('shuffleBtn').disabled=true; $('pdfBtn').disabled=true; $('colorBtn').disabled=true; return; }
+
+  const iv=initialView(); paint(iv.order, iv.ab);
+  $('shuffleBtn').onclick=()=>{ stamp(); const s=reshuffle(); paint(s.order, s.ab); };
+  $('pdfBtn').onclick=()=>window.print();
+  $('colorBtn').onclick=()=>{ byPerson=!byPerson; $('tbl').classList.toggle('byperson',byPerson); $('colorMode').textContent=byPerson?'人':'役割'; };
+})();
+</script>
+</body>
+</html>
