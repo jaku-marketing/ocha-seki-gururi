@@ -111,7 +111,7 @@
     setTimeout(()=>{ layer.innerHTML=''; layer.classList.remove('flash'); }, 1200);
   }
 
-  if(participants.length<3){ $('rows').innerHTML='<div style="padding:16px;font-weight:700">メンバーが3名以上必要です。<a href="step1.html" style="color:var(--pink-d)">← メンバーを選ぶ</a></div>'; $('shuffleBtn').disabled=true; $('pdfBtn').disabled=true; $('colorBtn').disabled=true; return; }
+  if(participants.length<3){ $('rows').innerHTML='<div style="padding:16px;font-weight:700">メンバーが3名以上必要です。<a href="step1.html" style="color:var(--pink-d)">← メンバーを選ぶ</a></div>'; $('shuffleBtn').disabled=true; $('saveBtn').disabled=true; $('colorBtn').disabled=true; return; }
 
   const iv=initialView(); paint(iv.order, iv.ab);
   $('shuffleBtn').onclick=()=>{ stamp(); const s=reshuffle(); paint(s.order, s.ab); };
