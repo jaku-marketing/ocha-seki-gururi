@@ -10,6 +10,7 @@
 <style>
   .pg-ico{ width:18px; height:18px; }
   #capture{ padding:6px 10px 12px; }
+  .act-cap{ font-size:10.5px; font-weight:800; color:var(--ink-soft); text-align:center; margin:-2px 0 1px; }
   #print-head{ display:none; }
   @media print{
     body{ background:#fff; } .app{ max-width:none; box-shadow:none; background:#fff; }
@@ -49,8 +50,12 @@
     <div class="note" id="note"></div>
   </div>
   <div class="actions stacked">
+    <div class="act-cap">タップで並べ直す（シャッフル）</div>
     <div class="act-row">
-      <button class="btn green" id="shuffleBtn" type="button"><svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h4l9 10h5M3 17h4l3-3M14 7h7M20 4l3 3-3 3M20 14l3 3-3 3"/></svg>シャッフル</button>
+      <button class="btn green" id="restBtn" type="button"><svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h4l9 10h5M3 17h4l3-3M14 7h7M20 4l3 3-3 3M20 14l3 3-3 3"/></svg>休憩優先</button>
+      <button class="btn green" id="varBtn" type="button"><svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h4l9 10h5M3 17h4l3-3M14 7h7M20 4l3 3-3 3M20 14l3 3-3 3"/></svg>顔ぶれ優先</button>
+    </div>
+    <div class="act-row">
       <button class="btn pink" id="saveBtn" type="button"><svg class="pg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>画像で保存</button>
     </div>
     <div class="act-row">
@@ -99,7 +104,7 @@
     if(mode==='manual')  return SEKI.buildOrder(participants,'manual',{ order: st.manualOrder }).map(p=>p.name);
     return null; // random は亭主も入れ替え
   }
-  function gen(){ return SEKI.buildSchedule(participants, { teishuOrder: teishuOrder(), earlyBy: earlyBy }).rows; }
+  function gen(priority){ return SEKI.buildSchedule(participants, { teishuOrder: teishuOrder(), earlyBy: earlyBy, priority: priority }).rows; }
 
   function stamp(){
     const layer=$('stampLayer'); layer.innerHTML='';
@@ -109,10 +114,11 @@
     setTimeout(()=>{ layer.innerHTML=''; layer.classList.remove('flash'); }, 1200);
   }
 
-  if(participants.length<3){ $('rows').innerHTML='<div style="padding:16px;font-weight:700">メンバーが3名以上必要です。<a href="step1.html" style="color:var(--pink-d)">← メンバーを選ぶ</a></div>'; $('shuffleBtn').disabled=true; $('saveBtn').disabled=true; $('colorBtn').disabled=true; return; }
+  if(participants.length<3){ $('rows').innerHTML='<div style="padding:16px;font-weight:700">メンバーが3名以上必要です。<a href="step1.html" style="color:var(--pink-d)">← メンバーを選ぶ</a></div>'; $('restBtn').disabled=true; $('varBtn').disabled=true; $('saveBtn').disabled=true; $('colorBtn').disabled=true; return; }
 
-  paint(gen());
-  $('shuffleBtn').onclick=()=>{ stamp(); paint(gen()); };
+  paint(gen('rest'));
+  $('restBtn').onclick=()=>{ stamp(); paint(gen('rest')); };
+  $('varBtn').onclick=()=>{ stamp(); paint(gen('variety')); };
   async function saveImage(){
     const btn=$('saveBtn'), old=btn.innerHTML; btn.disabled=true; btn.textContent='作成中…';
     try{

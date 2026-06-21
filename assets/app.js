@@ -80,8 +80,8 @@
   function scoreSchedule(rows, earlyBy, W){
     const active={};
     rows.forEach((row,r)=>{ [row.teishu,row.shokyaku,row.tsume].forEach(p=>{ (active[p.name]=active[p.name]||[]).push(r); }); });
-    let rest=0; // 連続した席で出番＝休憩なし違反
-    for(const k in active){ const a=active[k]; for(let i=1;i<a.length;i++){ if(a[i]-a[i-1]===1) rest++; } }
+    let rest=0; // 連続した席で出番＝休憩なし違反（早上がりは前半集約が目的のため対象外）
+    for(const k in active){ if(earlyBy && earlyBy[k]) continue; const a=active[k]; for(let i=1;i<a.length;i++){ if(a[i]-a[i-1]===1) rest++; } }
     const trio={}, pair={};
     rows.forEach(row=>{ const ns=[row.teishu.name,row.shokyaku.name,row.tsume.name].sort();
       trio[ns.join('|')]=(trio[ns.join('|')]||0)+1;
@@ -97,7 +97,8 @@
   // participants:[{name,...}] / opts:{teishuOrder?:[name], earlyBy?:{name:席}, weights?, trials?}
   function buildSchedule(participants, opts){
     opts=opts||{}; const n=participants.length;
-    const W=Object.assign({rest:4, trio:5, pair:1.5, early:1000}, opts.weights||{});
+    const PRESET={ rest:{rest:24,trio:2,pair:0.6,early:1000}, variety:{rest:2,trio:9,pair:2.5,early:1000}, balance:{rest:4,trio:5,pair:1.5,early:1000} };
+    const W=Object.assign({}, PRESET[opts.priority]||PRESET.balance, opts.weights||{});
     const earlyBy=opts.earlyBy||{};
     if(n<3){ const r=[]; for(let i=0;i<n;i++) r.push({seki:i+1, teishu:participants[i], shokyaku:participants[(i+1)%n], tsume:participants[(i+2)%n]}); return {rows:r, score:0, n}; }
     let fixedT=null;
@@ -117,6 +118,14 @@
       const rows=[]; for(let r=0;r<n;r++) rows.push({ seki:r+1, teishu:participants[T[r]], shokyaku:participants[S[r]], tsume:participants[Z[r]] });
       const sc=scoreSchedule(rows, earlyBy, W);
       if(sc<bestScore){ bestScore=sc; best=rows; if(sc===0) break; }
+    }
+    // 亭主固定時は規則的オフセット配置も総当たり（休憩0など構造的な最適を確実に拾う）
+    if(fixedT){
+      for(let a=1;a<n;a++) for(let b=a+1;b<n;b++){
+        const rows=[]; for(let r=0;r<n;r++) rows.push({ seki:r+1, teishu:participants[fixedT[r]], shokyaku:participants[fixedT[(r+a)%n]], tsume:participants[fixedT[(r+b)%n]] });
+        const sc=scoreSchedule(rows, earlyBy, W);
+        if(sc<bestScore){ bestScore=sc; best=rows; }
+      }
     }
     if(!best){ const [a,b]=offsets(n); const T=fixedT||idx; best=[]; for(let r=0;r<n;r++) best.push({ seki:r+1, teishu:participants[T[r]], shokyaku:participants[T[(r+a)%n]], tsume:participants[T[(r+b)%n]] }); }
     return { rows:best, score:bestScore, n };
