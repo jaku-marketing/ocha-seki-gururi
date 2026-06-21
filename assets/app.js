@@ -16,7 +16,7 @@
     {name:'藤本 勝重',   years:6,  gender:'m', attend:true},
     {name:'西川 矢右衛門',years:5,  gender:'m', attend:false},
     {name:'河合 悦子',   years:4,  gender:'f', attend:true},
-    {name:'光善坊 久司', years:4,  gender:'m', attend:true},
+    {name:'光善防 久司', years:4,  gender:'m', attend:true},
     {name:'白川 涼音',   years:3,  gender:'f', attend:false},
     {name:'浜上 優子',   years:3,  gender:'f', attend:false},
     {name:'金村 実香',   years:2,  gender:'f', attend:false},
@@ -25,7 +25,7 @@
     {name:'琴音',        years:0,  gender:'f', attend:true}    // お弟子さん（新規）
   ];
 
-  const LS_ROSTER='seki.roster.v3', LS_STATE='seki.state.v1';
+  const LS_ROSTER='seki.roster.v4', LS_STATE='seki.state.v1';
   function loadRoster(){ try{ const r=JSON.parse(localStorage.getItem(LS_ROSTER)); if(Array.isArray(r)&&r.length) return r.map(x=>({attend:true,gender:'f',years:0,...x})); }catch(e){} return DEFAULTS.map(x=>({...x})); }
   function saveRoster(r){ try{ localStorage.setItem(LS_ROSTER, JSON.stringify(r)); }catch(e){} }
   function resetRoster(){ try{ localStorage.removeItem(LS_ROSTER); }catch(e){} return DEFAULTS.map(x=>({...x})); }
