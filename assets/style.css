@@ -57,7 +57,7 @@ img{ display:block; }
 .actions{ flex:0 0 auto; display:flex; gap:10px; padding:12px 16px calc(14px + env(safe-area-inset-bottom)); background:rgba(255,255,255,.72); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); border-top:2px solid #fff; }
 .actions .btn{ flex:1 1 auto; }
 .actions .btn.narrow{ flex:0 0 auto; }
-.actions.stacked{ flex-direction:column; gap:8px; }
+.actions.stacked{ flex-direction:column; gap:9px; background:transparent; -webkit-backdrop-filter:none; backdrop-filter:none; border-top:0; padding-top:4px; padding-bottom:calc(26px + env(safe-area-inset-bottom)); }
 .act-row{ display:flex; gap:10px; }
 .act-row .btn{ flex:1 1 0; min-width:0; }
 
