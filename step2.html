@@ -15,9 +15,13 @@
   .ctrl .t svg{ width:18px; height:18px; }
   .early-sub{ font-size:11px; color:var(--ink-soft); margin:0 0 9px; font-weight:700; line-height:1.5; }
   .early-list{ display:flex; flex-direction:column; gap:7px; }
-  .erow{ display:flex; align-items:center; gap:8px; }
-  .erow .en{ flex:1; font-size:13px; font-weight:800; color:var(--ink); }
-  .erow select{ font-family:inherit; font-weight:800; font-size:12.5px; color:var(--ink); border:2px solid var(--line); border-radius:10px; padding:5px 8px; background:#fff; }
+  .erow{ display:flex; align-items:center; gap:6px; }
+  .erow select{ font-family:inherit; font-weight:800; font-size:12px; color:var(--ink); border:2px solid var(--line); border-radius:10px; padding:7px 5px; background:#fff; }
+  .erow .ep{ flex:1 1 0; min-width:0; }
+  .erow .es{ flex:0 0 88px; min-width:0; }
+  .erow .ex{ flex:0 0 30px; width:30px; height:30px; border-radius:8px; border:2px solid var(--line); background:#fff; color:var(--ink-soft); font-weight:900; font-size:12px; line-height:1; }
+  .add-early{ width:100%; margin-top:9px; padding:10px; border:2px dashed var(--pink); border-radius:12px; background:rgba(255,255,255,.55); color:var(--pink-d); font-weight:900; font-size:12.5px; }
+  .add-early:active{ transform:translateY(1px); }
 </style>
 </head>
 <body>
@@ -48,8 +52,9 @@
 
     <div class="ctrl early">
       <div class="t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>早上がりの人（任意）</div>
-      <p class="early-sub">◯席までに〈亭主・正客・詰め〉を終えて、以降はお休み。お先に失礼したい方に。</p>
+      <p class="early-sub">◯席までに〈亭主・正客・詰め〉を終えて、以降はお休み。お先に失礼したい方だけ追加。</p>
       <div id="earlyList" class="early-list"></div>
+      <button class="add-early" id="addEarly" type="button">＋ 早上がりの人を追加</button>
     </div>
   </div>
   <div class="actions">
@@ -70,18 +75,30 @@
   let seniorDesc=(st.seniorDesc!==false);
   let manualOrder=(Array.isArray(st.manualOrder)&&st.manualOrder.length?st.manualOrder.filter(n=>selSet.has(n)):participants.slice().sort((a,b)=>b.years-a.years).map(m=>m.name));
 
-  let earlyBy=Object.assign({}, st.earlyBy||{});
+  let earlyRows=[]; Object.keys(st.earlyBy||{}).forEach(nm=>{ if(selSet.has(nm)) earlyRows.push({name:nm, seat:st.earlyBy[nm]}); });
   function renderEarly(){
-    const list=$('earlyList'); list.innerHTML=''; const n=participants.length;
-    if(n-1<3){ list.innerHTML='<p class="early-sub" style="margin:0">3名では指定できません（席が少ないため）。</p>'; return; }
-    participants.forEach(m=>{
-      const row=document.createElement('div'); row.className='erow';
-      let opts='<option value="0">なし</option>';
-      for(let k=3;k<=n-1;k++){ opts+='<option value="'+k+'"'+(earlyBy[m.name]===k?' selected':'')+'>'+SEKI.sekiLabel(k)+'まで</option>'; }
-      row.innerHTML='<span class="en">'+m.name+'</span><select data-name="'+m.name+'">'+opts+'</select>';
-      list.appendChild(row);
+    const wrap=$('earlyList'), add=$('addEarly'), n=participants.length, maxSeat=n-1;
+    wrap.innerHTML='';
+    if(maxSeat<3){ wrap.innerHTML='<p class="early-sub" style="margin:0">人数が少ないため指定できません。</p>'; add.style.display='none'; return; }
+    earlyRows.forEach((row,idx)=>{
+      const used=new Set(earlyRows.filter((_,i)=>i!==idx).map(r=>r.name));
+      const avail=participants.filter(m=>!used.has(m.name));
+      const pOpts=avail.map(m=>'<option value="'+m.name+'"'+(m.name===row.name?' selected':'')+'>'+m.name+'</option>').join('');
+      let sOpts=''; for(let k=3;k<=maxSeat;k++) sOpts+='<option value="'+k+'"'+(k===row.seat?' selected':'')+'>'+SEKI.sekiLabel(k)+'まで</option>';
+      const el=document.createElement('div'); el.className='erow';
+      el.innerHTML='<select class="ep" data-i="'+idx+'">'+pOpts+'</select><select class="es" data-i="'+idx+'">'+sOpts+'</select><button class="ex" data-i="'+idx+'" type="button" aria-label="削除">✕</button>';
+      wrap.appendChild(el);
     });
-    list.querySelectorAll('select').forEach(s=>s.onchange=()=>{ const nm=s.dataset.name, v=parseInt(s.value,10); if(v>=3) earlyBy[nm]=v; else delete earlyBy[nm]; });
+    wrap.querySelectorAll('.ep').forEach(s=>s.onchange=()=>{ earlyRows[+s.dataset.i].name=s.value; renderEarly(); });
+    wrap.querySelectorAll('.es').forEach(s=>s.onchange=()=>{ earlyRows[+s.dataset.i].seat=parseInt(s.value,10); });
+    wrap.querySelectorAll('.ex').forEach(b=>b.onclick=()=>{ earlyRows.splice(+b.dataset.i,1); renderEarly(); });
+    add.style.display = earlyRows.length>=n ? 'none' : '';
+  }
+  function addEarlyRow(){
+    const used=new Set(earlyRows.map(r=>r.name));
+    const a=participants.find(m=>!used.has(m.name));
+    if(!a) return;
+    earlyRows.push({name:a.name, seat:3}); renderEarly();
   }
   function setMode(m){ mode=m; document.querySelectorAll('.modecard').forEach(c=>c.classList.toggle('on',c.dataset.mode===m)); renderCtrl(); }
   document.querySelectorAll('.modecard').forEach(c=>c.onclick=()=>setMode(c.dataset.mode));
@@ -136,10 +153,11 @@
   }
 
   $('genBtn').onclick=()=>{ if(participants.length<3){ alert('メンバーが3名以上必要です。'); location.href='step1.html'; return; }
-    const cleanEarly={}; participants.forEach(m=>{ if(earlyBy[m.name]) cleanEarly[m.name]=earlyBy[m.name]; });
+    const cleanEarly={}; earlyRows.forEach(r=>{ if(selSet.has(r.name) && r.seat>=3) cleanEarly[r.name]=r.seat; });
     SEKI.patchState({mode,seniorDesc,manualOrder,earlyBy:cleanEarly}); location.href='step3.html'; };
 
   setMode(mode);
+  $('addEarly').onclick=addEarlyRow;
   renderEarly();
 })();
 </script>
