@@ -81,8 +81,8 @@
   function cell(role,m){ const c=COLOR[m.name]||{pc:'#eee',pct:'#444'};
     return '<div class="cell '+role+'" style="--pc:'+c.pc+';--pct:'+c.pct+'">'+SEKI.sei(m.name)+'</div>'; }
 
-  function paint(order, ab){
-    const {rows,a,b,n}=SEKI.makeTable(order, ab);
+  function paint(rows){
+    const n=rows.length;
     const wrap=$('rows'); wrap.innerHTML='';
     rows.forEach(r=>{ const d=document.createElement('div'); d.className='trow';
       d.innerHTML='<div class="sk">'+SEKI.sekiLabel(r.seki)+'</div>'+cell('t',r.teishu)+cell('s',r.shokyaku)+cell('d',r.tsume);
@@ -90,22 +90,16 @@
     const dt=new Date(); const ds=dt.getFullYear()+'年'+(dt.getMonth()+1)+'月'+dt.getDate()+'日';
     $('title').textContent='席順表（全 '+n+' 席）';
     $('date').textContent=ds+' ／ 参加 '+n+' 名'; $('pdate').textContent=ds+'　参加 '+n+' 名';
-    $('note').innerHTML='<b>仕組み</b>：各自が〈亭主・正客・詰め〉を1回ずつ（重複なし）。正客＝亭主の'+a+'つあと、詰め＝'+b+'つあと（巡回）で、出番が均等に散り間に休憩が入ります。';
+    $('note').innerHTML='<b>仕組み</b>：各自が〈亭主・正客・詰め〉を1回ずつ（重複なし）。出番の合間に休憩（お控え）が入り、同じ顔ぶれが続かないよう自動で組みます。';
   }
   const mode = st.mode||'senior';
-  const baseSenior = SEKI.buildOrder(participants,'senior',{ asc: st.seniorDesc===false });
-  function initialView(){
-    if(mode==='senior') return { order:baseSenior, ab:null };
-    if(mode==='manual')  return { order:SEKI.buildOrder(participants,'manual',{ order:st.manualOrder }), ab:null };
-    return { order:SEKI.buildOrder(participants,'random'), ab:null };  // random
+  const earlyBy = st.earlyBy||{};
+  function teishuOrder(){
+    if(mode==='senior') return SEKI.buildOrder(participants,'senior',{ asc: st.seniorDesc===false }).map(p=>p.name);
+    if(mode==='manual')  return SEKI.buildOrder(participants,'manual',{ order: st.manualOrder }).map(p=>p.name);
+    return null; // random は亭主も入れ替え
   }
-  const baseManual = SEKI.buildOrder(participants,'manual',{ order: st.manualOrder });
-  function reshuffle(){
-    const n=participants.length;
-    if(mode==='senior') return { order:baseSenior, ab:SEKI.randomOffsets(n) };  // 亭主固定・正客/詰めのみ
-    if(mode==='manual')  return { order:baseManual, ab:SEKI.randomOffsets(n) };  // 手動も亭主固定・正客/詰めのみ
-    return { order:SEKI.buildOrder(participants,'random'), ab:SEKI.randomOffsets(n) };  // ランダムは全部
-  }
+  function gen(){ return SEKI.buildSchedule(participants, { teishuOrder: teishuOrder(), earlyBy: earlyBy }).rows; }
 
   function stamp(){
     const layer=$('stampLayer'); layer.innerHTML='';
@@ -117,8 +111,8 @@
 
   if(participants.length<3){ $('rows').innerHTML='<div style="padding:16px;font-weight:700">メンバーが3名以上必要です。<a href="step1.html" style="color:var(--pink-d)">← メンバーを選ぶ</a></div>'; $('shuffleBtn').disabled=true; $('saveBtn').disabled=true; $('colorBtn').disabled=true; return; }
 
-  const iv=initialView(); paint(iv.order, iv.ab);
-  $('shuffleBtn').onclick=()=>{ stamp(); const s=reshuffle(); paint(s.order, s.ab); };
+  paint(gen());
+  $('shuffleBtn').onclick=()=>{ stamp(); paint(gen()); };
   async function saveImage(){
     const btn=$('saveBtn'), old=btn.innerHTML; btn.disabled=true; btn.textContent='作成中…';
     try{

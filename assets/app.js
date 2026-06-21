@@ -57,8 +57,72 @@
   }
   // 亭主を固定したまま 正客/詰め をシャッフルするための無作為オフセット（0,a,b すべて相異＝役の重複なし）
   function randomOffsets(n){ if(n<3) return [1,2]; let a=1+Math.floor(Math.random()*(n-1)), b; do{ b=1+Math.floor(Math.random()*(n-1)); }while(b===a); return a<b?[a,b]:[b,a]; }
+
+  // ===== バランス生成エンジン（休憩・顔ぶれ・早上がりを最良化） =====
+  // forbidden[r]=その席に置けない人indexのSet。各人1回ずつの順列を返す（不可ならnull）
+  function assignAvoiding(n, forbidden){
+    for(let attempt=0; attempt<80; attempt++){
+      const p=shuffle([...Array(n).keys()]);
+      let bad=false; for(let r=0;r<n;r++){ if(forbidden[r].has(p[r])){ bad=true; break; } }
+      if(!bad) return p;
+      let ok=true;
+      for(let r=0;r<n;r++){
+        if(forbidden[r].has(p[r])){
+          let sw=false;
+          for(let s=0;s<n;s++){ if(s!==r && !forbidden[r].has(p[s]) && !forbidden[s].has(p[r])){ const t=p[r]; p[r]=p[s]; p[s]=t; sw=true; break; } }
+          if(!sw){ ok=false; break; }
+        }
+      }
+      if(ok){ let good=true; for(let r=0;r<n;r++){ if(forbidden[r].has(p[r])){ good=false; break; } } if(good) return p; }
+    }
+    return null;
+  }
+  function scoreSchedule(rows, earlyBy, W){
+    const active={};
+    rows.forEach((row,r)=>{ [row.teishu,row.shokyaku,row.tsume].forEach(p=>{ (active[p.name]=active[p.name]||[]).push(r); }); });
+    let rest=0; // 連続した席で出番＝休憩なし違反
+    for(const k in active){ const a=active[k]; for(let i=1;i<a.length;i++){ if(a[i]-a[i-1]===1) rest++; } }
+    const trio={}, pair={};
+    rows.forEach(row=>{ const ns=[row.teishu.name,row.shokyaku.name,row.tsume.name].sort();
+      trio[ns.join('|')]=(trio[ns.join('|')]||0)+1;
+      pair[ns[0]+'|'+ns[1]]=(pair[ns[0]+'|'+ns[1]]||0)+1;
+      pair[ns[0]+'|'+ns[2]]=(pair[ns[0]+'|'+ns[2]]||0)+1;
+      pair[ns[1]+'|'+ns[2]]=(pair[ns[1]+'|'+ns[2]]||0)+1;
+    });
+    let trioRep=0; for(const k in trio){ if(trio[k]>1) trioRep+=trio[k]-1; }
+    let pairRep=0; for(const k in pair){ if(pair[k]>1) pairRep+=pair[k]-1; }
+    let early=0; if(earlyBy){ for(const nm in earlyBy){ const K=earlyBy[nm], a=active[nm]||[]; a.forEach(r=>{ if(r+1>K) early+=(r+1-K); }); } }
+    return W.rest*rest + W.trio*trioRep + W.pair*pairRep + W.early*early;
+  }
+  // participants:[{name,...}] / opts:{teishuOrder?:[name], earlyBy?:{name:席}, weights?, trials?}
+  function buildSchedule(participants, opts){
+    opts=opts||{}; const n=participants.length;
+    const W=Object.assign({rest:4, trio:5, pair:1.5, early:1000}, opts.weights||{});
+    const earlyBy=opts.earlyBy||{};
+    if(n<3){ const r=[]; for(let i=0;i<n;i++) r.push({seki:i+1, teishu:participants[i], shokyaku:participants[(i+1)%n], tsume:participants[(i+2)%n]}); return {rows:r, score:0, n}; }
+    let fixedT=null;
+    if(opts.teishuOrder){ fixedT=opts.teishuOrder.map(nm=>participants.findIndex(p=>p.name===nm)).filter(i=>i>=0); if(fixedT.length!==n) fixedT=null; }
+    const trials=opts.trials || (n<=8?3000:1400);
+    const idx=[...Array(n).keys()];
+    const hasEarly=Object.keys(earlyBy).length>0;
+    let best=null, bestScore=Infinity;
+    for(let t=0;t<trials;t++){
+      let T;
+      if(fixedT) T=fixedT;
+      else { T=shuffle(idx); if(hasEarly) T.sort((a,b)=>(earlyBy[participants[a].name]||999)-(earlyBy[participants[b].name]||999)); }
+      const forbS=T.map(p=>new Set([p]));
+      const S=assignAvoiding(n, forbS); if(!S) continue;
+      const forbZ=T.map((p,r)=>new Set([p, S[r]]));
+      const Z=assignAvoiding(n, forbZ); if(!Z) continue;
+      const rows=[]; for(let r=0;r<n;r++) rows.push({ seki:r+1, teishu:participants[T[r]], shokyaku:participants[S[r]], tsume:participants[Z[r]] });
+      const sc=scoreSchedule(rows, earlyBy, W);
+      if(sc<bestScore){ bestScore=sc; best=rows; if(sc===0) break; }
+    }
+    if(!best){ const [a,b]=offsets(n); const T=fixedT||idx; best=[]; for(let r=0;r<n;r++) best.push({ seki:r+1, teishu:participants[T[r]], shokyaku:participants[T[(r+a)%n]], tsume:participants[T[(r+b)%n]] }); }
+    return { rows:best, score:bestScore, n };
+  }
   const KANJI=['','初','二','三','四','五','六','七','八','九','十'];
   const sekiLabel=i=> i<=10 ? KANJI[i]+'席' : i+'席';
 
-  window.SEKI={ DEFAULTS, MEN, GIRL, loadRoster, saveRoster, resetRoster, loadState, saveState, patchState, withIcons, sei, offsets, randomOffsets, shuffle, buildOrder, makeTable, sekiLabel };
+  window.SEKI={ DEFAULTS, MEN, GIRL, loadRoster, saveRoster, resetRoster, loadState, saveState, patchState, withIcons, sei, offsets, randomOffsets, shuffle, buildOrder, makeTable, buildSchedule, scoreSchedule, sekiLabel };
 })();
