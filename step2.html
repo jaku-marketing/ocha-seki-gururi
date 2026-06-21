@@ -13,6 +13,11 @@
   .ctrl{ background:rgba(255,255,255,.6); border:2px solid #fff; border-radius:14px; padding:12px 13px; margin:-4px 0 14px; }
   .ctrl .t{ display:flex; align-items:center; gap:7px; font-size:12px; font-weight:900; color:var(--pink-d); margin-bottom:7px; }
   .ctrl .t svg{ width:18px; height:18px; }
+  .early-sub{ font-size:11px; color:var(--ink-soft); margin:0 0 9px; font-weight:700; line-height:1.5; }
+  .early-list{ display:flex; flex-direction:column; gap:7px; }
+  .erow{ display:flex; align-items:center; gap:8px; }
+  .erow .en{ flex:1; font-size:13px; font-weight:800; color:var(--ink); }
+  .erow select{ font-family:inherit; font-weight:800; font-size:12.5px; color:var(--ink); border:2px solid var(--line); border-radius:10px; padding:5px 8px; background:#fff; }
 </style>
 </head>
 <body>
@@ -40,6 +45,12 @@
     </button>
 
     <div class="ctrl" id="ctrl"></div>
+
+    <div class="ctrl early">
+      <div class="t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>早上がりの人（任意）</div>
+      <p class="early-sub">◯席までに〈亭主・正客・詰め〉を終えて、以降はお休み。お先に失礼したい方に。</p>
+      <div id="earlyList" class="early-list"></div>
+    </div>
   </div>
   <div class="actions">
     <a class="btn ghost narrow" href="step1.html">← 戻る</a>
@@ -59,6 +70,19 @@
   let seniorDesc=(st.seniorDesc!==false);
   let manualOrder=(Array.isArray(st.manualOrder)&&st.manualOrder.length?st.manualOrder.filter(n=>selSet.has(n)):participants.slice().sort((a,b)=>b.years-a.years).map(m=>m.name));
 
+  let earlyBy=Object.assign({}, st.earlyBy||{});
+  function renderEarly(){
+    const list=$('earlyList'); list.innerHTML=''; const n=participants.length;
+    if(n-1<3){ list.innerHTML='<p class="early-sub" style="margin:0">3名では指定できません（席が少ないため）。</p>'; return; }
+    participants.forEach(m=>{
+      const row=document.createElement('div'); row.className='erow';
+      let opts='<option value="0">なし</option>';
+      for(let k=3;k<=n-1;k++){ opts+='<option value="'+k+'"'+(earlyBy[m.name]===k?' selected':'')+'>'+SEKI.sekiLabel(k)+'まで</option>'; }
+      row.innerHTML='<span class="en">'+m.name+'</span><select data-name="'+m.name+'">'+opts+'</select>';
+      list.appendChild(row);
+    });
+    list.querySelectorAll('select').forEach(s=>s.onchange=()=>{ const nm=s.dataset.name, v=parseInt(s.value,10); if(v>=3) earlyBy[nm]=v; else delete earlyBy[nm]; });
+  }
   function setMode(m){ mode=m; document.querySelectorAll('.modecard').forEach(c=>c.classList.toggle('on',c.dataset.mode===m)); renderCtrl(); }
   document.querySelectorAll('.modecard').forEach(c=>c.onclick=()=>setMode(c.dataset.mode));
 
@@ -112,9 +136,11 @@
   }
 
   $('genBtn').onclick=()=>{ if(participants.length<3){ alert('メンバーが3名以上必要です。'); location.href='step1.html'; return; }
-    SEKI.patchState({mode,seniorDesc,manualOrder}); location.href='step3.html'; };
+    const cleanEarly={}; participants.forEach(m=>{ if(earlyBy[m.name]) cleanEarly[m.name]=earlyBy[m.name]; });
+    SEKI.patchState({mode,seniorDesc,manualOrder,earlyBy:cleanEarly}); location.href='step3.html'; };
 
   setMode(mode);
+  renderEarly();
 })();
 </script>
 </body>
